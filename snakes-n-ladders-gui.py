@@ -4,16 +4,17 @@ from random import randint
 
 #consts
 ALL_LADDERS_ARE_SNAKES = True
-NUM_PLAYERS = 5
-AUTOADVANCE = True          # if this is False you have to press spacebar to advance
-AUTODELAY_MS = 100          # unexpected behaviour if delay is too low
-MOVE_SPEED_FRAMES_PER_TILE = 20
-
+NUM_PLAYERS = 20
+AUTOADVANCE = False         # if this is False you have to press spacebar to advance
+AUTODELAY_MS = 5          # unexpected behaviour if delay is too low
+MOVE_SPEED_FRAMES_PER_TILE = 100
+FPS=120
 
 
 
 pygame.init()
 pygame.font.init()
+PLAYER_COLORS = [(255,255,255), (0,255,255), (255,0,255), (255,255,0), (255,0,0), (0,0,255), (0,255,0), (0,0,0)]
 
 class Tile(sprite.Sprite):
     font = font.SysFont("Arial", size=16)
@@ -39,7 +40,7 @@ class Player(sprite.Sprite):
         self.rect = Rect(0,0,tileSize[0],tileSize[1])
         self.center = pygame.Vector2(self.rect.center)
         self.image = Surface((tileSize[0],tileSize[1]), pygame.SRCALPHA, 32).convert_alpha()
-        pygame.draw.circle(self.image, (255,0,0), self.rect.center, self.rect.width//3)
+        pygame.draw.circle(self.image, PLAYER_COLORS[ind%len(PLAYER_COLORS)], self.rect.center, self.rect.width//3)
         txt = self.font.render(str(ind), 1, (0,0,0))
         self.image.blit(txt, (self.rect.w/2-txt.get_width()/2,self.rect.h/2-txt.get_height()/2))
         self.target_tile = self.current_tile = 1
@@ -100,16 +101,18 @@ def init_tiles(resolution, *groups):
 
     
 def update_player(turn, players:list[Player], tiles:list[Tile]):
-    
-    player = players[turn%NUM_PLAYERS]
-    if player.target_tile<len(tiles)-1:
-        roll = randint(1, 6)
-        player.target_tile = min(player.target_tile+ roll, len(tiles)-1)
-        player.turn +=1
-        # print(f"rolled a {roll}; Player {player.index} to {player.target_tile}")
+    roll = 6
+    while roll == 6:
+        player = players[turn%NUM_PLAYERS]
+        if player.target_tile<len(tiles)-1:
+            roll = randint(1, 6)
+            print(f"player {player.index} rolled {roll}")
+            player.target_tile = min(player.target_tile+ roll, len(tiles)-1)
+            player.turn +=1
+            # print(f"rolled a {roll}; Player {player.index} to {player.target_tile}")
 
-        if player.target_tile == len(tiles)-1:
-            return True
+            if player.target_tile == len(tiles)-1:
+                return True
         
 def handle_events(players_list, tiles_list, current_players):
     global turn
@@ -178,10 +181,37 @@ def main():
 
 
         pygame.display.flip()
-        clock.tick(60)
-        
+        clock.tick(FPS)
         
         
 
+def test1(r:int):
+    roll = 6
+    while roll == 6:
+        roll = r+1%6
+
+def test2(r: int):
+    roll = randint(1, 6)
+    
+    None if roll!=6 else test2(r+1%6)
+
+def test3(r: int):
+    roll = r
+
+    test2(r+1%6) if roll == 6 else None
+
 if __name__ == '__main__':
-    main()
+    # main()
+    import timeit
+
+    t1 = [timeit.Timer(lambda: test1(i)).timeit() for i in range(1,6)]
+    print("while:",round(sum(t1)/6,3))
+    print(t1)
+
+    t2 = [timeit.Timer(lambda: test2(i)).timeit() for i in range(1, 6)]
+    print("if not 6:",round(sum(t2)/6, 3))
+    print(t2)
+
+    t3 = [timeit.Timer(lambda: test3(i)).timeit() for i in range(1, 6)]
+    print("if 6:", round(sum(t3)/6, 3))
+    print(t3)
